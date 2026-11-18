@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>먼작귀 빌리지</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Sunflower:wght@300;500;700&display=swap">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 28C4 20 2 13 6 8c3-4 8-2 10 2 2-4 7-6 10-2 4 5 2 12-10 20z' fill='%23f2748e' stroke='%234a3230' stroke-width='2'/%3E%3C/svg%3E">
+<style>
+  /* 심즈식 화면 배치 + 치이카와 그림책 디자인: 크림색 종이, 굵은 갈색 테두리, 파스텔, 아래로 떨어지는 단단한 그림자 */
+  :root {
+    --paper: #fffaf0; --cream: #fff3d6; --ink: #4a3230; --quiet: #8a7566; --line: #ead9bb;
+    --pink: #f6bcc8; --pink-d: #f2748e; --mint: #bfe6c4; --sky: #cfeaf4; --butter: #ffe59a;
+    --good: #78c46d; --ok: #f2c230; --bad: #e0607a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--sky); color: var(--ink); font: 13px/1.45 "Malgun Gothic", "Apple SD Gothic Neo", sans-serif; user-select: none; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  #world { position: fixed; inset: 0; width: 100%; height: 100%; display: block; outline: 0; }
+  #tint { position: fixed; inset: 0; pointer-events: none; mix-blend-mode: multiply; transition: background 2s; }
+  .ui { position: fixed; z-index: 10; background: var(--paper); border: 3px solid var(--ink); border-radius: 22px; box-shadow: 0 5px 0 var(--ink); }
+  .chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 11px; background: #fff; border: 2.5px solid var(--ink); border-radius: 999px; font-weight: 700; white-space: nowrap; }
+  .round { display: grid; place-items: center; width: 38px; height: 38px; padding: 0; background: #fff; border: 2.5px solid var(--ink); border-radius: 50%; box-shadow: 0 3px 0 var(--ink); font-size: 14px; font-weight: 700; line-height: 1; }
+  .round:active, .tab:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
+  .pill:active { transform: translate(-50%, calc(-50% + 2px)); box-shadow: 0 1px 0 var(--ink); }
+  .round.on { background: var(--pink); }
+
+  /* 위 가운데: 날짜·시계·빠르기 */
+  #clock { left: 50%; top: 12px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; padding: 6px 10px 6px 8px; }
+  #clock .sky { width: 40px; height: 40px; display: grid; place-items: center; font-size: 22px; background: var(--butter); border: 2.5px solid var(--ink); border-radius: 50%; }
+  #clock .when { min-width: 100px; text-align: center; line-height: 1.15; }
+  #clock .when small { display: block; color: var(--quiet); font-weight: 700; }
+  #clock .when b { font-size: 21px; font-variant-numeric: tabular-nums; letter-spacing: .5px; }
+  #clock .speeds { display: flex; gap: 5px; }
+  #clock .speeds .round { width: 40px; font-size: 12px; letter-spacing: -2px; }
+
+  /* 아래 왼쪽: 가족(출연진) 줄 + 고른 캐릭터 */
+  #family { left: 14px; bottom: 196px; display: flex; gap: 7px; padding: 7px 10px; border-radius: 999px; }
+  .mate { position: relative; width: 46px; height: 46px; padding: 0; background: var(--cream); border: 2.5px solid var(--ink); border-radius: 50%; transition: transform .15s; }
+  .mate img, .face img { width: 100%; height: 100%; border-radius: 50%; display: block; object-fit: cover; }
+  .mate .dot { position: absolute; right: -4px; bottom: -4px; width: 16px; height: 16px; border: 2.5px solid var(--ink); border-radius: 50%; }
+  .mate.on { box-shadow: 0 0 0 3px #fff, 0 0 0 6px var(--pink-d); }
+  .mate:hover { transform: translateY(-3px); }
+  .mate .zz { position: absolute; left: -5px; top: -8px; font-size: 13px; }
+  /* 동행 배지: 얼굴 위쪽에 손잡은 아이콘과 같이 가는 친구의 작은 얼굴 */
+  .mate .with { position: absolute; left: 50%; top: -15px; transform: translateX(-50%); display: flex; align-items: center; gap: 1px; padding: 1px 4px 1px 2px; background: #fff7d6; border: 2px solid var(--ink); border-radius: 999px; box-shadow: 0 2px 0 var(--ink); white-space: nowrap; pointer-events: none; animation: withPop .35s ease-out; }
+  .mate .with i { font-style: normal; font-size: 11px; line-height: 1; }
+  .mate .with .with-face { width: 15px; height: 15px; border: 1.5px solid var(--ink); border-radius: 50%; overflow: hidden; background: var(--cream); display: block; }
+  .mate .with .with-face img { width: 100%; height: 100%; display: block; }
+  .mate .with b { font-size: 10px; line-height: 1; }
+  .mate.together { border-color: #e8a23a; }
+  .chip.with-chip { background: #fff7d6; }
+  @keyframes withPop { from { transform: translateX(-50%) scale(.4); opacity: 0; } to { transform: translateX(-50%) scale(1); opacity: 1; } }
+
+  #me { left: 14px; bottom: 14px; width: 530px; height: 170px; padding: 12px 14px 12px 154px; }
+  #me .face { position: absolute; left: 12px; top: -28px; width: 132px; height: 132px; padding: 0; background: var(--cream); border: 3.5px solid var(--ink); border-radius: 50%; box-shadow: 0 5px 0 var(--ink); }
+  #me .plate { position: absolute; left: 12px; top: 110px; width: 132px; text-align: center; }
+  #me .plate b { display: inline-block; padding: 2px 12px; font-size: 15px; background: var(--pink); border: 2.5px solid var(--ink); border-radius: 999px; }
+  #me .plate small { display: block; margin-top: 3px; font-weight: 700; }
+  #me .money { position: absolute; right: 14px; top: 11px; background: var(--butter); }
+  #me h4 { margin: 0 0 2px; font-size: 12px; color: var(--quiet); }
+  #me .doing { font-size: 16px; font-weight: 700; margin: 0 120px 10px 0; min-height: 23px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .queue { display: flex; gap: 12px; align-items: center; }
+  .q { position: relative; flex: none; width: 56px; height: 56px; display: grid; place-items: center; padding: 0; font-size: 24px; background: #fff; border: 2.5px solid var(--ink); border-radius: 18px; box-shadow: 0 3px 0 var(--ink); }
+  .q.now { width: 66px; height: 66px; font-size: 28px; border-radius: 20px; background: var(--mint); }
+  .q .fill { position: absolute; left: 0; right: 0; bottom: 0; background: rgba(120, 196, 109, .55); border-radius: 0 0 16px 16px; transition: height .4s; }
+  .q .ico { position: relative; }
+  .q .x { position: absolute; right: -9px; top: -9px; width: 22px; height: 22px; padding: 0; font-size: 11px; line-height: 1; background: #fff; border: 2px solid var(--ink); border-radius: 50%; }
+  .q .x:hover { background: var(--pink); }
+  .q .lab { position: absolute; left: 50%; bottom: -20px; transform: translateX(-50%); font-size: 11px; font-weight: 700; white-space: nowrap; max-width: 62px; overflow: hidden; text-overflow: ellipsis; }
+  .q.empty { border-style: dashed; box-shadow: none; background: transparent; color: #c9b79d; font-size: 18px; }
+
+  /* 아래 오른쪽: 욕구 · 하고 싶은 것 · 마을 소식 */
+  #panel { right: 14px; bottom: 14px; width: 360px; min-height: 170px; padding: 0 14px 12px; }
+  .tabs { display: flex; gap: 5px; margin: -18px 0 8px; }
+  .tab { padding: 5px 13px; font-weight: 700; background: var(--cream); border: 2.5px solid var(--ink); border-radius: 999px; box-shadow: 0 3px 0 var(--ink); }
+  .tab.on { background: var(--pink); }
+  .need { display: grid; grid-template-columns: 24px 50px 1fr; align-items: center; gap: 6px; margin: 5px 0; }
+  .need i { font-style: normal; font-size: 17px; text-align: center; }
+  .need span { font-weight: 700; }
+  .meter { height: 18px; padding: 2px; background: #fff; border: 2.5px solid var(--ink); border-radius: 999px; overflow: hidden; }
+  .meter b { display: block; height: 100%; min-width: 6px; border-radius: 999px; transition: width .4s; }
+  .meter b.low { animation: blink 1s infinite; }
+  @keyframes blink { 50% { opacity: .4; } }
+  .wish { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 2px dotted var(--line); }
+  .wish i { font-style: normal; font-size: 18px; width: 24px; text-align: center; }
+  .wish .grow { flex: 1; min-width: 0; }
+  .wish .grow b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .wish small { display: block; color: var(--quiet); }
+  .wish button { padding: 2px 10px; font-weight: 700; background: #fff; border: 2px solid var(--ink); border-radius: 999px; }
+  .wish button:hover { background: var(--pink); }
+  .news { max-height: 150px; overflow: auto; }
+  .tabs .tab { white-space: nowrap; padding-left: 9px; padding-right: 9px; font-size: 12px; }
+  .cal-title { display: block; margin: 2px 0 4px; }
+  .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+  .cal i { font-style: normal; text-align: center; font-size: 11px; color: var(--quiet); }
+  .cal div { min-height: 26px; padding: 1px 2px; border-radius: 6px; background: #fff8e6; font-size: 10px; line-height: 1.15; overflow: hidden; }
+  .cal div.past { opacity: .45; }
+  .cal div.today { outline: 2px solid #e8634f; }
+  .cal div.has { background: #f9d6de; }
+  .cal div small { display: block; color: var(--quiet); }
+  .cal div span { font-weight: 700; white-space: nowrap; }
+  .cal-list { max-height: 92px; overflow: auto; margin-top: 6px; font-size: 12px; }
+  .cal-list div { display: flex; gap: 6px; align-items: baseline; padding: 2px 0; border-bottom: 2px dotted var(--line); }
+  .cal-list span { flex: 1; color: var(--quiet); font-size: 11px; }
+  .cal-list small.ok { color: #4f9a56; font-weight: 700; }
+  .news div { padding: 3px 0; border-bottom: 2px dotted var(--line); }
+  .news small { color: var(--quiet); margin-right: 6px; font-variant-numeric: tabular-nums; }
+  .quiet { color: var(--quiet); }
+  .rank-row { display: grid; grid-template-columns: 20px 30px 86px 1fr 62px; align-items: center; gap: 5px; padding: 2px 3px; border-radius: 10px; }
+  .rank-row.me { background: var(--pink); }
+  .rank-no { text-align: center; }
+  .rank-name { font-weight: 700; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rank-row .meter { height: 14px; }
+  .rank-row small { font-weight: 700; color: var(--quiet); text-align: right; white-space: nowrap; }
+  .traits { display: grid; gap: 2px; }
+  .trait { display: grid; grid-template-columns: 22px 62px 1fr; align-items: baseline; gap: 4px; }
+  .trait i, .feel i { font-style: normal; text-align: center; }
+  .trait small, .feel small { color: var(--quiet); font-size: 11px; line-height: 1.25; }
+  .feel { display: grid; grid-template-columns: 22px 62px 1fr; align-items: baseline; gap: 4px; margin: 5px 0 4px; padding: 4px 0; border-top: 2px dotted var(--line); border-bottom: 2px dotted var(--line); }
+  .asp-title { display: block; margin-bottom: 2px; }
+  .asp-step { display: grid; grid-template-columns: 14px 1fr 70px 30px; align-items: center; gap: 5px; padding: 1px 0; }
+  .asp-step small { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .asp-step .meter { height: 12px; }
+  .asp-step em { font-style: normal; font-size: 11px; color: var(--quiet); text-align: right; font-variant-numeric: tabular-nums; }
+  .asp-step.done small { color: #4f9a56; font-weight: 700; }
+  .asp-step.now small { font-weight: 700; }
+  .bonds { max-height: 168px; overflow: auto; }
+  .bond { display: grid; grid-template-columns: 30px 62px 1fr 58px; align-items: center; gap: 6px; padding: 2px 0; }
+  .bond-face { width: 28px; height: 28px; display: block; background: var(--cream); border: 2px solid var(--ink); border-radius: 50%; overflow: hidden; }
+  .bond-face img { width: 100%; height: 100%; display: block; }
+  .bond .meter { height: 14px; }
+  .bond small { font-weight: 700; color: var(--quiet); text-align: right; }
+
+  /* 파이 메뉴: 누른 자리 둘레에 할 수 있는 일 */
+  #pie { position: fixed; z-index: 30; inset: 0; }
+  #pie .hub { position: absolute; transform: translate(-50%, -50%); min-width: 118px; max-width: 180px; padding: 7px 14px; text-align: center; background: var(--paper); border: 3px solid var(--ink); border-radius: 22px; box-shadow: 0 4px 0 var(--ink); animation: pop .25s cubic-bezier(.3, 1.6, .5, 1); }
+  #pie .hub b { display: block; font-size: 15px; }
+  #pie .hub small { display: block; color: var(--quiet); font-weight: 700; font-size: 11px; }
+  .pill { position: absolute; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 6px; padding: 6px 14px 6px 7px; font-weight: 700; text-align: left; background: #fff; border: 2.5px solid var(--ink); border-radius: 999px; box-shadow: 0 3px 0 var(--ink); white-space: nowrap; animation: fly .3s cubic-bezier(.3, 1.4, .5, 1) both; }
+  .pill i { flex: none; font-style: normal; display: grid; place-items: center; width: 28px; height: 28px; font-size: 15px; background: var(--cream); border: 2px solid var(--ink); border-radius: 50%; }
+  .pill:hover { background: var(--pink); }
+  .pill.no { background: #f3ede2; color: var(--quiet); border-style: dashed; box-shadow: none; cursor: default; }
+  .pill small { display: block; font-size: 11px; line-height: 1.2; color: var(--bad); }
+  @keyframes fly { from { left: var(--cx); top: var(--cy); opacity: 0; transform: translate(-50%, -50%) scale(.4); } }
+  #tip { position: fixed; z-index: 31; transform: translate(-50%, 0); max-width: 330px; padding: 6px 12px; font-size: 12px; text-align: center; background: #fff; border: 2.5px solid var(--ink); border-radius: 14px; pointer-events: none; }
+  .eff .up { color: #2f7d42; font-weight: 700; } .eff .down { color: #b5443c; font-weight: 700; }
+
+  #helpBtn { position: fixed; z-index: 10; left: 14px; top: 14px; }
+  #faceBtn { position: fixed; z-index: 10; left: 60px; top: 14px; }
+  #help { left: 14px; top: 62px; width: 310px; padding: 10px 14px; font-size: 12px; }
+  #help b { display: block; margin-bottom: 4px; font-size: 14px; }
+  /* 타이틀 화면: 평소 화면을 숨기고 제목 글자만 얹는다 */
+  .ui, #helpBtn, #faceBtn { transition: opacity .7s; }
+  body.titling .ui, body.titling #helpBtn, body.titling #faceBtn { opacity: 0; pointer-events: none; }
+  #title { position: fixed; inset: 0; z-index: 45; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 8vh 0 7vh; cursor: pointer; user-select: none; background: linear-gradient(rgba(207,234,244,.34), transparent 42%, transparent 72%, rgba(74,50,48,.16)); }
+  #title.leaving { pointer-events: none; animation: titleFade .8s ease forwards; }
+  #title .logo { font-family: "Jua", "Malgun Gothic", sans-serif; text-align: center; line-height: .98; filter: drop-shadow(0 .6vmin 0 rgba(74,50,48,.28)); }
+  #title .line { display: flex; justify-content: center; }
+  #title .big { font-size: 15vmin; color: var(--pink-d); }
+  #title .sub { font-size: 10vmin; color: #e3a73a; margin-top: .3vmin; }
+  #title .line span { display: inline-block; -webkit-text-stroke: 1.5vmin #fff; paint-order: stroke fill; opacity: 0; animation: letterDrop .75s calc(.5s + var(--i) * .09s) cubic-bezier(.3, 1.5, .55, 1) forwards, letterBob 3.2s calc(1.8s + var(--i) * .16s) ease-in-out infinite; }
+  #title.leaving .line span { animation: letterOut .55s calc(var(--i) * .03s) ease-in forwards; }
+  #title .hint { padding: .5em 1.6em; font: 400 3vmin "Jua", "Malgun Gothic", sans-serif; color: var(--ink); background: var(--paper); border-radius: 999px; box-shadow: 0 .5vmin 0 rgba(74,50,48,.3); opacity: 0; animation: hintIn .5s var(--wait) ease forwards, hintPulse 1.7s calc(var(--wait) + .5s) ease-in-out infinite; }
+  #title.leaving .hint { animation: titleFade .25s ease forwards; }
+  #title .who { position: absolute; left: 2.4vmin; bottom: 2.4vmin; padding: .25em .9em; font: 400 2.2vmin "Jua", "Malgun Gothic", sans-serif; color: var(--ink); background: rgba(255,250,240,.85); border-radius: 999px; }
+  @keyframes letterDrop { 0% { opacity: 0; transform: translateY(-60vh) scale(.9, 1.2); } 55% { opacity: 1; transform: translateY(0) scale(1.18, .78); } 78% { transform: translateY(-3vmin) scale(.95, 1.06); } 100% { opacity: 1; transform: none; } }
+  @keyframes letterBob { 0%, 100% { opacity: 1; transform: translateY(0) rotate(0); } 50% { opacity: 1; transform: translateY(-1vmin) rotate(-1.4deg); } }
+  @keyframes letterOut { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-40vh) scale(.8); } }
+  @keyframes hintIn { to { opacity: 1; } }
+  @keyframes hintPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .72; transform: scale(1.05); } }
+  @keyframes titleFade { to { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { #title .line span { animation: hintIn .2s forwards; } #title .hint { animation: hintIn .2s forwards; } }
+  #loading { position: fixed; z-index: 50; inset: 0; display: grid; place-items: center; background: var(--cream); font-size: 18px; font-weight: 700; }
+  [hidden] { display: none !important; }
+  @media (max-width: 1200px) { #panel { width: 300px; } #me { width: 460px; } }
+  /* ---------- 기존 디자인 다듬기: 틀과 색은 그대로, 글꼴·입체감·여백만 정리 ---------- */
+  html, body { font: 500 13.5px/1.5 "Sunflower", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif; }
+  #clock .when b, #me .plate b, #me .doing, #me .money, .tab, #pie .hub b, .pill, #help b, .cal-title, .asp-title { font-family: "Jua", "Malgun Gothic", sans-serif; font-weight: 400; }
+  .ui { border-width: 2.5px; background-color: var(--paper); background-image: radial-gradient(rgba(234, 217, 187, .32) 1px, transparent 1.4px); background-size: 12px 12px; box-shadow: 0 5px 0 var(--ink), inset 0 0 0 3px rgba(255, 255, 255, .85); }
+  button { transition: transform .12s ease, box-shadow .12s ease, background-color .15s ease; }
+  button:focus-visible { outline: 3px solid var(--pink-d); outline-offset: 2px; }
+  .round { box-shadow: 0 3px 0 var(--ink), inset 0 -3px 0 rgba(234, 217, 187, .55); }
+  .round:hover { transform: translateY(-2px); box-shadow: 0 5px 0 var(--ink), inset 0 -3px 0 rgba(234, 217, 187, .55); background: var(--cream); }
+  .round.on, .round.on:hover { background: var(--pink); box-shadow: 0 2px 0 var(--ink), inset 0 2px 0 rgba(255, 255, 255, .6); transform: translateY(1px); }
+  .chip { border-width: 2px; }
+
+  #clock { gap: 10px; padding: 7px 10px; border-radius: 26px; }
+  #clock .sky { box-shadow: inset 0 -3px 0 rgba(226, 174, 60, .55); }
+  #clock .when { min-width: 104px; }
+  #clock .when small { font-weight: 500; font-size: 12px; }
+  #clock .when b { font-size: 24px; letter-spacing: 1px; }
+  #clock .speeds { padding: 4px 6px 7px; background: var(--cream); border-radius: 22px; box-shadow: inset 0 0 0 2px var(--line); }
+
+  #family { padding: 8px 12px; gap: 8px; }
+  .mate { box-shadow: 0 3px 0 var(--ink); }
+  .mate:hover { transform: translateY(-4px); box-shadow: 0 6px 0 var(--ink); }
+  .mate.on, .mate.on:hover { box-shadow: 0 0 0 3px #fff, 0 0 0 6px var(--pink-d), 0 7px 0 var(--ink); }
+  .mate .dot { width: 15px; height: 15px; border-width: 2px; }
+
+  #me { height: 186px; padding: 14px 16px 14px 156px; border-radius: 26px; }
+  #family { bottom: 212px; }
+  #me .face { box-shadow: 0 5px 0 var(--ink), inset 0 0 0 3px #fff; }
+  #me .plate { top: 116px; }
+  #me .plate b { font-size: 17px; padding: 1px 14px; box-shadow: 0 2px 0 var(--ink); }
+  #me .plate small { font-weight: 500; font-size: 12px; }
+  #me .money { top: 12px; font-size: 15px; padding: 3px 13px; box-shadow: 0 2px 0 var(--ink); }
+  #me h4 { font-weight: 500; }
+  #me .doing { font-size: 19px; margin-bottom: 8px; }
+  .q { box-shadow: 0 3px 0 var(--ink), inset 0 -3px 0 rgba(234, 217, 187, .5); }
+  .q:hover:not(.empty) { transform: translateY(-2px); }
+  .q .fill { background: rgba(120, 196, 109, .42); }
+  .q .lab { bottom: -21px; font-weight: 500; }
+
+  #panel { width: 372px; padding: 2px 16px 14px; border-radius: 26px; }
+  .tab { padding: 5px 12px !important; font-size: 14px !important; box-shadow: 0 3px 0 var(--ink), inset 0 -2px 0 rgba(234, 217, 187, .6); }
+  .tab:hover { transform: translateY(-2px); }
+  .tab.on, .tab.on:hover { background: var(--pink); transform: translateY(-3px); box-shadow: 0 4px 0 var(--ink), inset 0 2px 0 rgba(255, 255, 255, .55); }
+  .need { grid-template-columns: 28px 56px 1fr; margin: 7px 0; }
+  .need i { display: grid; place-items: center; width: 26px; height: 26px; font-size: 15px; background: var(--cream); border-radius: 50%; box-shadow: inset 0 0 0 2px var(--line); }
+  .need span { font-weight: 500; font-size: 14px; }
+  .meter { height: 16px; background: #fbf1dd; border-width: 2px; }
+  .meter b { box-shadow: inset 0 3px 0 rgba(255, 255, 255, .42); }
+  .wish { padding: 5px 4px; border-radius: 10px; }
+  .wish:hover { background: rgba(255, 229, 154, .35); }
+  .wish .grow b { font-weight: 700; }
+  .wish button { box-shadow: 0 2px 0 var(--ink); }
+  .wish button:hover { transform: translateY(-1px); }
+  .news div { padding: 4px 2px; }
+  .news, .bonds, .cal-list { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+  .rank-row { padding: 3px 4px; }
+  .bond-face { box-shadow: 0 2px 0 var(--ink); }
+
+  #pie .hub { border-width: 2.5px; box-shadow: 0 4px 0 var(--ink), inset 0 0 0 3px rgba(255, 255, 255, .85); }
+  #pie .hub b { font-size: 18px; }
+  #pie .hub small { font-weight: 500; font-size: 12px; }
+  .pill { font-size: 14px; border-width: 2px; padding: 5px 15px 5px 6px; transition: background-color .12s ease, box-shadow .12s ease; box-shadow: 0 3px 0 var(--ink), inset 0 -2px 0 rgba(234, 217, 187, .5); }
+  .pill:hover { box-shadow: 0 5px 0 var(--ink); }
+  .pill small { font-family: "Sunflower", "Malgun Gothic", sans-serif; font-weight: 500; }
+  #tip { border-width: 2px; box-shadow: 0 3px 0 rgba(74, 50, 48, .4); font-weight: 500; }
+  #help { font-size: 13px; }
+  #loading { font: 400 22px "Jua", "Malgun Gothic", sans-serif; }
+  #title .logo-pic img { width: min(620px, 78vw); height: auto; display: block; margin: 0 auto; animation: logoPop .7s cubic-bezier(.2,1.4,.4,1) both; filter: drop-shadow(0 4px 0 rgba(0,0,0,.08)); }
+  @keyframes logoPop { from { transform: scale(.6) translateY(-20px); opacity: 0; } to { transform: none; opacity: 1; } }
+</style>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap">
+<link rel="stylesheet" href="village.css">
+</head>
+<body>
+<canvas id="world" tabindex="0" aria-label="치이카와 마을 3D 화면"></canvas>
+<div id="tint"></div>
+<div id="clock" class="ui"></div>
+<div id="family" class="ui"></div>
+<div id="me" class="ui"></div>
+<div id="panel" class="ui"></div>
+<div id="pie" hidden></div>
+<div id="tip" hidden></div>
+<button id="helpBtn" class="round" type="button" title="조작법">?</button>
+<button id="faceBtn" class="round" type="button" title="얼굴 설정 파일(face-map.json) 불러오기">얼</button>
+<input id="faceFile" type="file" accept=".json,application/json" hidden>
+<div id="help" class="ui" hidden><b>조작법</b>아래 동그라미 얼굴을 누르면 그 캐릭터를 돌봐요 · 건물·장소·다른 캐릭터를 누르면 둘레에 할 수 있는 일이 떠요 · 시킨 일은 줄을 서서 차례로 해요 · 드래그 회전 · 휠 확대 · WASD 카메라 이동 · Space 멈춤 · Esc 메뉴 닫기 · 얼굴(얼) 버튼으로 얼굴 설정 파일(face-map.json)을 불러오면 상황별 얼굴이 그 설정으로 바뀌어요</div>
+<div id="loading">마을을 불러오는 중이에요</div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script>
+window.LOW_SPEC = (function () {
+  var q = new URLSearchParams(location.search).get('quality');
+  if (q) return q === 'low';
+  return matchMedia('(pointer: coarse)').matches || Math.min(screen.width, screen.height) < 768;
+})();
+document.write(window.LOW_SPEC ? '<script src="faces-small.js"><\/script>' : '<script src="face-scan-data.js"><\/script><script src="face-scan-images-2.js"><\/script>');
+</script>
+
+<script src="face-scan-images-3.js"></script>
+<script src="face-scan-custom.js"></script>
+<script src="eye-scans.js"></script>
+<script src="brow-scans.js"></script>
+<script src="mouth-scans.js"></script>
+<script src="face-fixes.js"></script>
+<script src="character.js"></script>
+<script src="look-kit.js"></script>
+<script src="glb-loader.js"></script>
+<script src="glb-world.js"></script>
+<script src="world.js"></script>
+<script src="polish.js"></script>
+<script src="world-art.js"></script>
+<script src="world-town.js"></script>
+<script src="actor-kit.js"></script>
+<script src="anims.js"></script>
+<script src="anims/props.js"></script>
+<script src="anim-rig.js"></script>
+<script src="anims-base.js"></script>
+<script src="anims-sims.js"></script>
+<script src="village-props.js"></script>
+<script src="weapons.js"></script>
+<script src="anims-real.js"></script>
+<script src="sockets.js"></script>
+<script src="interiors.js"></script>
+<script src="interiors-places.js"></script>
+<script src="interiors-auto.js"></script>
+<script src="bath-rooms.js"></script>
+<script src="act-fx.js"></script>
+<script src="labor.js"></script>
+<script src="village-objects.js"></script>
+<script src="shop.js"></script>
+<script src="village-nav.js"></script>
+<script src="map-dressing.js"></script>
+<script src="foot-stools.js"></script>
+<script src="calendar.js"></script>
+<script src="place-chains.js"></script>
+<script src="persona.js"></script>
+<script src="lemon-factory.js"></script>
+<script src="usagi-sleep.js"></script>
+<script src="weeding-field.js"></script>
+<script src="traits.js"></script>
+<script src="ecology.js"></script>
+<script src="town-sets.js"></script>
+<script src="minor-chains.js"></script>
+<script src="wild-zones.js"></script>
+<script src="training-ground.js"></script>
+<script src="combat-moves.js"></script>
+<script src="minor-acts.js"></script>
+<script src="rakko-car.js"></script>
+<script src="pochette-shop.js"></script>
+<script src="shifts.js"></script>
+<script src="cave-rock.js"></script>
+<script src="ramen-kitchen.js"></script>
+<script src="public-sets.js"></script>
+<script src="shop-sets.js"></script>
+<script src="shop-fronts.js"></script>
+<script src="market-sets.js"></script>
+<script src="more-sets.js"></script>
+<script src="purpose.js"></script>
+<script src="village-sim.js"></script>
+<script src="visible.js"></script>
+<script src="team-work.js"></script>
+<script src="invite.js"></script>
+<script src="reception-queue.js"></script>
+<script src="bag.js"></script>
+<script src="goals.js"></script>
+<script src="study-places.js"></script>
+<script src="rescue-heli.js"></script>
+<script src="together.js"></script>
+<script src="pair.js"></script>
+<script src="pair-meals.js"></script>
+<script src="encounters.js"></script>
+<script src="rampage.js"></script>
+<script src="village-hud.js"></script>
+<script src="handoff.js"></script>
+<script src="contact-check.js"></script>
+<script src="map-elements.js"></script>
+<script src="yoroi-knight.js"></script>
+<script src="prop-models.js"></script>
+<script src="scene-acts.js"></script>
+<script src="scene-acts-more.js"></script>
+<script src="scene-clips.js"></script>
+<script src="set-clips.js"></script>
+<script src="perf.js"></script>
+<script src="lemon-work.js"></script>
+<script src="market-stalls.js"></script>
+<script src="shrine.js"></script>
+<script src="big-pudding.js"></script>
+<script src="arcade-recycle.js"></script>
+<script src="pajama-stage.js"></script>
+<script src="dotori-club.js"></script>
+<script src="pond-fishing.js"></script>
+<script src="vehicles.js"></script>
+<script src="chimera.js"></script>
+<script src="weapon-shop.js"></script>
+<script src="economy.js"></script>
+<script src="pass-board.js"></script>
+<script src="society.js"></script>
+<script src="housing.js"></script>
+<script src="furniture.js"></script>
+<script src="audit-fixes.js"></script>
+<script src="resident-homes.js"></script>
+<script src="springs.js"></script>
+<script src="kinen-statue.js"></script>
+<script src="chimera-faces.js"></script>
+<script src="chimera-models.js"></script>
+<script src="firebase-config.js"></script>
+<script src="auth.js"></script>
+<script src="village-client.js"></script>
+<script src="game.js"></script>
+<script>
+// 얼굴 설정 파일(face-map.json) 불러오기: persona.js가 localStorage의 값을 읽어 표정 표에 덮는다
+(function () {
+  var btn = document.getElementById('faceBtn'), input = document.getElementById('faceFile');
+  if (!btn || !input) return;
+  function mark(t) { btn.textContent = t; setTimeout(function () { btn.textContent = '얼'; }, 1600); }
+  btn.addEventListener('click', function () { input.click(); });
+  input.addEventListener('change', function () {
+    var f = input.files && input.files[0];
+    input.value = '';
+    if (!f) return;
+    f.text().then(function (t) {
+      try {
+        var j = JSON.parse(t);
+        if (!j || !j.faces) throw new Error('faces 없음');
+        localStorage.setItem('chiikawa-face-map', JSON.stringify(j));
+        mark('✓');
+      } catch (e) { mark('!'); }
+    }).catch(function () { mark('!'); });
+  });
+})();
+</script>
+</body>
+</html>
